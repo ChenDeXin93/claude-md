@@ -28,7 +28,7 @@ Installs support for Claude Code, Codex, Cursor, and Windsurf by default.
 your-project/
   AGENT.md                         # source of truth
   AGENTS.md                        # Codex / Cursor / Windsurf
-  CLAUDE.md                        # Claude Code
+  CLAUDE.md                        # Claude Code wrapper — imports AGENT.md via @AGENT.md (see #3)
   agent-md.toml.example            # deterministic verification config
 
   .claude/
@@ -167,6 +167,20 @@ freshness_seconds = 3600
 
 When no checks are detected, hooks allow completion but warn that the
 work is unverified.
+
+## CLAUDE.md is a Wrapper, Not a Copy
+
+`AGENT.md` is the single source of truth. Installing writes `CLAUDE.md`
+as a one-line wrapper that imports `AGENT.md` via Claude Code's native
+`@AGENT.md` syntax, guarded by a comment that tells Claude Code's
+`/init` skill (and humans) not to strip it. This prevents `/init` from
+seeing two identical files, applying DRY, and silently deleting every
+directive from Claude Code's active context.
+
+See [#3](https://github.com/iamfakeguru/agent-md/issues/3) for the full
+story. Other agents that don't support import syntax (Codex, Cursor,
+Windsurf) still get the AGENT.md body inlined — either in `AGENTS.md`
+or in the rules-directory form their tool expects.
 
 ## Visual Evidence
 

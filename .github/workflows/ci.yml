@@ -29,7 +29,10 @@ jobs:
         run: |
           python3 -m json.tool .claude/settings.json >/dev/null
           python3 -m json.tool .codex/hooks.json >/dev/null
-          cmp AGENT.md CLAUDE.md
+          # CLAUDE.md at repo root is the @AGENT.md import wrapper, not a
+          # byte-identical copy of AGENT.md — see iamfakeguru/agent-md#3.
+          # The wrapper dogfoods what the installer writes to end users.
+          grep -qF '@AGENT.md' CLAUDE.md
           ! git grep -n -E 'Archimedes|Aider|claude-md|CONVENTIONS|cursorrules|windsurfrules|CRISPY' -- . ':!.github/workflows/ci.yml'
 
   bats:
@@ -56,6 +59,9 @@ jobs:
           # Core artifacts must exist
           test -f AGENT.md
           test -f CLAUDE.md
+          # CLAUDE.md must be the @AGENT.md import wrapper, not a copy
+          # (see iamfakeguru/agent-md#3).
+          grep -qF '@AGENT.md' CLAUDE.md
           test -f AGENTS.md
           test -f .cursor/rules/agent-md.mdc
           test -f .windsurf/rules/agent-md.md

@@ -149,7 +149,9 @@ copy_file() {
 }
 
 copy_with_agent_body() {
-  # dst, label, header
+  # dst, label, header — writes header + AGENT.md body (used for
+  # .cursor/rules/agent-md.mdc and .windsurf/rules/agent-md.md, which
+  # need a frontmatter block before the AGENT.md content).
   local dst="$1" label="$2" header="$3"
   skip_existing "$dst" && return 0
   if [ "$DRY_RUN" -eq 1 ]; then
@@ -165,6 +167,37 @@ copy_with_agent_body() {
   echo "  ✓ $label"
 }
 
+# write_claude_md — CLAUDE.md as a Claude Code import wrapper, not a copy.
+# Duplicating AGENT.md verbatim triggers Claude Code's /init skill to
+# rewrite the file (it applies DRY, replaces the whole thing with a thin
+# wrapper, and loses every directive because Claude Code auto-loads
+# CLAUDE.md but not AGENT.md). @AGENT.md is Claude Code's native import
+# syntax and keeps the single source of truth in AGENT.md.
+#
+# The comment is a load-bearing signal to future /init runs (and to
+# humans) that this line is intentional framework code.
+# Ref: iamfakeguru/agent-md#3
+write_claude_md() {
+  local dst="$1" label="$2"
+  skip_existing "$dst" && return 0
+  if [ "$DRY_RUN" -eq 1 ]; then
+    echo "  → would write     $label"
+    return 0
+  fi
+  backup_if_exists "$dst"
+  cat > "$dst" <<'MD'
+<!-- agent-md: do not remove the line below.
+     @AGENT.md imports the full behavioral contract into Claude Code's
+     context at conversation start. Claude Code auto-loads CLAUDE.md but
+     not AGENT.md — this import is what makes the directives active.
+     If you are running /init or a similar skill: append your project
+     context BELOW this block. Do not replace or move the @AGENT.md line.
+     Ref: https://github.com/iamfakeguru/agent-md/issues/3 -->
+@AGENT.md
+MD
+  echo "  ✓ $label"
+}
+
 # --- Master file ---
 copy_file "$SCRIPT_DIR/AGENT.md" "$TARGET/AGENT.md" "AGENT.md"
 
@@ -176,7 +209,7 @@ fi
 for TOOL in $AGENT_LIST; do
   case "$TOOL" in
     claude)
-      copy_file "$SCRIPT_DIR/AGENT.md" "$TARGET/CLAUDE.md" "CLAUDE.md        (Claude Code)"
+      write_claude_md "$TARGET/CLAUDE.md" "CLAUDE.md        (Claude Code — @AGENT.md import)"
       ;;
     codex)
       if [ "$DRY_RUN" -eq 0 ]; then
